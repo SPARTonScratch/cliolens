@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from cliolens import __version__
-from cliolens.formatter import MarkdownFormatter, TreeRenderer, language_for
+from cliolens.formatter import MarkdownFormatter, TreeRenderer, fence_for, language_for
 from cliolens.scanner import FileEntry, ScanResult, SkipRecord
 
 # --------------------------------------------------------------------- tree
@@ -133,3 +133,42 @@ def test_binary_notice(tmp_path):
     ]
     doc = MarkdownFormatter(max_file_size_label="100KB").format(result)
     assert "[Binary file: image/png, 24.0KB — content omitted]" in doc
+
+def test_fence_for():
+    assert fence_for("plain") == "```"
+    assert fence_for("has ``` inside") == "````"
+    assert fence_for("`````` six") == "```````"
+
+
+def test_fence_escalates_for_backtick_content(tmp_path):
+    result = ScanResult(root=tmp_path / "demo")
+    result.entries = [
+        FileEntry(
+            "README.md", tmp_path / "README.md", 40,
+            content="# Title\n\n```python\nprint('hi')\n```\n",
+        )
+    ]
+    doc = MarkdownFormatter(max_file_size_label="100KB").format(result)
+    assert "````markdown" in doc                    # outer fence escalated
+    assert "```python\nprint('hi')\n```" in doc     # inner fence verbatim
+
+
+def test_fence_stays_triple_for_plain_content(tmp_path):
+    result = ScanResult(root=tmp_path / "demo")
+    result.entries = [FileEntry("a.py", tmp_path / "a.py", 8, content="x = 1\n")]
+    doc = MarkdownFormatter(max_file_size_label="100KB").format(result)
+    assert "```python" in doc
+    assert "````" not in doc
+
+
+def test_source_containing_placeholder_text_is_preserved(tmp_path):
+    result = ScanResult(root=tmp_path / "demo")
+    result.entries = [
+        FileEntry(
+            "tricky.py", tmp_path / "tricky.py", 28,
+            content='PH = "@@CLIOLENS_TOKENS@@"\n',
+        )
+    ]
+    doc = MarkdownFormatter(max_file_size_label="100KB").format(result)
+    assert '"@@CLIOLENS_TOKENS@@"' in doc           # verbatim, not corrupted
+    assert "**Estimated Tokens:** 0" not in doc     # real numbers present
