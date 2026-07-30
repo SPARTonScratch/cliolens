@@ -119,7 +119,7 @@ large and low-signal for AI context. This may be revisited based on feedback.*
 - **Files Included:** 87
 - **Files Skipped:** 55
 - **Estimated Tokens:** 45,210 (~180,840 characters)
-- **Total Size:** 312.4KB
+- **Total Source Size:** 312.4KB
 
 ---
 

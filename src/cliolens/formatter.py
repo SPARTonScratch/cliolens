@@ -153,7 +153,7 @@ class MarkdownFormatter:
             f"- **Files Included:** {format_count(result.files_included)}\n"
             f"- **Files Skipped:** {format_count(result.files_skipped)}\n"
             f"- **Estimated Tokens:** {format_count(tokens)} (~{format_count(chars)} characters)\n"
-            f"- **Total Size:** {format_size(result.total_bytes)}\n"
+            f"- **Total Source Size:** {format_size(result.total_bytes)}\n"
             "\n"
             "---\n"
             "\n"
