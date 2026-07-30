@@ -6,10 +6,6 @@
 
 <p align="center"><b>One command. One file. Your whole codebase, ready for any AI.</b></p>
 
-# ClioLens
-
-**One command. One file. Your whole codebase, ready for any AI.**
-
 ClioLens packs a project directory into a single markdown *context dump* with
 a visual directory tree, the full text of every relevant file, and metadata. It's designed to be attached to free web-based AI models
 (Qwen, Kimi, ChatGPT, Claude…) for whole-codebase analysis.
