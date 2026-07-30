@@ -178,21 +178,62 @@ def test_binary_detector_latin1(tmp_path):
     assert enc == "latin-1"
 
 
-def test_binary_files_skipped_by_default(make_project):
+def test_binary_files_always_included(make_project):
     root = make_project({"app.py": "print(1)\n", "logo.png": b"\x89PNG\r\n\x1a\n\x00\x00"})
     result = scan(root)
-    assert rel_paths(result) == {"app.py"}
-    assert any(s.reason == "binary" for s in result.skipped)
+    assert rel_paths(result) == {"app.py", "logo.png"}
+    binary = next(e for e in result.entries if e.relative_path == "logo.png")
+    assert binary.is_binary
+    assert binary.content is None
+    assert result.files_skipped == 0
 
 
-def test_binary_files_listed_with_flag(make_project):
+def test_binary_entry_has_mime_type(make_project):
     root = make_project({"logo.png": b"\x89PNG\x00\x00"})
-    result = scan(root, include_binary=True)
-    assert len(result.entries) == 1
+    result = scan(root)
     entry = result.entries[0]
     assert entry.is_binary
     assert entry.content is None
     assert "png" in entry.mime_type
+
+
+def test_extension_blacklist_overrides_content(make_project):
+    """A .jpg containing valid UTF-8 text is still binary — extension wins."""
+    root = make_project({"fake.jpg": "this is actually text\n"})
+    result = scan(root)
+    assert result.entries[0].is_binary
+
+
+def test_extension_blacklist_case_insensitive(make_project):
+    root = make_project({"PHOTO.JPG": b"\xff\xd8\xff\xe0"})
+    result = scan(root)
+    assert result.entries[0].is_binary
+
+
+def test_gltf_blacklisted(make_project):
+    root = make_project({"model.gltf": '{"asset": {}}'})
+    result = scan(root)
+    assert result.entries[0].is_binary
+
+
+def test_pickle_blacklisted(make_project):
+    root = make_project({"data.pkl": b"\x80\x05"})
+    result = scan(root)
+    assert result.entries[0].is_binary
+
+
+def test_svg_is_text_not_binary(make_project):
+    root = make_project({"diagram.svg": '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n'})
+    result = scan(root)
+    entry = result.entries[0]
+    assert not entry.is_binary
+    assert "<svg" in entry.content
+
+
+def test_unknown_extension_falls_back_to_sniff(make_project):
+    root = make_project({"data.unknown": b"\x00\x01\x02"})
+    result = scan(root)
+    assert result.entries[0].is_binary
 
 
 # ---------------------------------------------------------------- truncation

@@ -50,7 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-o", "--output", metavar="PATH", default=DEFAULT_OUTPUT,
         help="output file path (default: 'cliolens project context.md' in the current "
-            "directory; use '-o -' to print to stdout; existing files are overwritten)",
+             "directory; use '-o -' to print to stdout; existing files are overwritten)",
     )
     parser.add_argument(
         "-m", "--max-file-size", default="100KB", metavar="SIZE",
@@ -78,8 +78,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="warn if the estimated token count exceeds N (0 = no limit)",
     )
     parser.add_argument(
-        "--include-binary", action="store_true",
-        help="list binary files in the dump with a placeholder notice",
+        "--show-binary", action="store_true",
+        help="show a placeholder notice for binary files in the File Contents "
+             "section (they always appear in the directory tree and counts)",
     )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}",
@@ -113,7 +114,7 @@ def _write_stdout(document: str) -> None:
         raise SystemExit(1) from None
 
 
-def _print_dry_run(result) -> None:
+def _print_dry_run(result, *, show_binary: bool = False) -> None:
     print(
         f"{style('[dry run]', 'cyan', 'bold')} {style('cliolens v' + __version__, 'cyan')}"
         " — no output generated\n"
@@ -121,15 +122,14 @@ def _print_dry_run(result) -> None:
     print(f"root: {result.root}\n")
     print(
         style(
-            f"would include ({format_count(result.files_included)} files, "
-            f"{format_size(result.total_bytes)}):",
+            f"would include ({format_count(result.files_included)} files):",
             "green", "bold",
         )
     )
     for entry in result.entries:
         tags = []
         if entry.is_binary:
-            tags.append("binary, notice only")
+            tags.append("binary, notice in contents" if show_binary else "binary")
         if entry.truncated:
             tags.append("truncated")
         suffix = f"  [{', '.join(tags)}]" if tags else ""
@@ -148,6 +148,7 @@ def _print_dry_run(result) -> None:
 
 def _print_summary(result, args, output_path: Path | None, document: str) -> None:
     tokens = estimate_tokens(document)
+    resolved = output_path.resolve() if output_path is not None else None
     print(
         "\n".join(
             [
@@ -155,11 +156,9 @@ def _print_summary(result, args, output_path: Path | None, document: str) -> Non
                 f"{style(' — context dump complete', 'dim')}",
                 f"  root      {result.root}",
                 f"  scanned   {format_count(result.files_scanned)} files",
-                f"  included  {format_count(result.files_included)} files"
-                f" ({format_size(result.total_bytes)})",
+                f"  included  {format_count(result.files_included)} files",
                 f"  skipped   {format_count(result.files_skipped)} files",
-                f"  tokens    ~{format_count(tokens)} estimated",
-                f"  output    {output_path if output_path is not None else '<stdout>'}",
+                f"  output    {resolved if resolved is not None else '<stdout>'}",
             ]
         ),
         file=sys.stderr,
@@ -220,18 +219,20 @@ def _run(argv: list[str] | None) -> int:
         use_gitignore=not args.no_gitignore,
         user_excludes=args.exclude,
         follow_symlinks=args.follow_symlinks,
-        include_binary=args.include_binary,
         protect_paths={output_path} if output_path is not None else None,
         warn=_warn,
     )
     result = scanner.scan()
 
     if args.dry_run:
-        _print_dry_run(result)
+        _print_dry_run(result, show_binary=args.show_binary)
         return 0
 
     # -- format & write -------------------------------------------------------
-    document = MarkdownFormatter(max_file_size_label=args.max_file_size).format(result)
+    document = MarkdownFormatter(
+        max_file_size_label=args.max_file_size,
+        show_binary=args.show_binary,
+    ).format(result)
 
     if output_path is not None:
         try:

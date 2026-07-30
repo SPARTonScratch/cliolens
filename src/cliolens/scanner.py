@@ -57,6 +57,46 @@ EXCLUDED_FILE_GLOBS = (
     "*.dll", "*.exe", "*.bin", "*.lock",
 )
 
+# --------------------------------------------------------------------------
+# Binary extension blacklist — fast-path classification (no file read).
+# Case-insensitive on ALL platforms: a .PNG is a PNG everywhere.
+# Content sniffing (BinaryDetector.sniff) remains the authority for
+# extensions not listed here.
+# --------------------------------------------------------------------------
+
+BINARY_EXTENSIONS = frozenset(
+    {
+        # Images
+        ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".tiff", ".tif",
+        ".webp", ".avif", ".heic", ".heif", ".psd", ".xcf",
+        # Audio
+        ".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma", ".m4a", ".opus",
+        ".mid", ".midi",
+        # Video
+        ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v",
+        ".mpg", ".mpeg", ".3gp",
+        # Fonts
+        ".woff", ".woff2", ".ttf", ".otf", ".eot",
+        # Archives
+        ".zip", ".tar", ".gz", ".bz2", ".xz", ".7z", ".rar", ".zst",
+        ".lz", ".lz4", ".cab",
+        # Documents
+        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+        ".odt", ".ods", ".odp",
+        # Compiled / VM
+        ".pyd", ".wasm", ".jar", ".war", ".ear", ".nupkg",
+        # Disk / Firmware
+        ".iso", ".img", ".dmg", ".vhd", ".vhdx",
+        # Database
+        ".sqlite", ".sqlite3", ".db", ".mdb", ".accdb",
+        # ML / Scientific
+        ".onnx", ".pb", ".h5", ".hdf5", ".npy", ".npz", ".pkl", ".pickle",
+        ".parquet", ".feather",
+        # 3D / Misc
+        ".gltf", ".glb", ".fbx", ".obj", ".stl", ".blend", ".swf", ".dat",
+    }
+)
+
 _BINARY_SNIFF_BYTES = 8192          # spec §6.4: inspect the first 8KB
 _CONTROL_CHAR_BUDGET = 0.30         # spec §6.4: >30% control chars → binary
 TRUNCATED_LINE_COUNT = 50           # spec §5.4: keep the first 50 lines
@@ -328,6 +368,17 @@ class BinaryDetector:
         )
         return control / len(text) > _CONTROL_CHAR_BUDGET, encoding
 
+    @staticmethod
+    def classify(path: Path) -> tuple[bool, str]:
+        """Classify a file as binary or text.
+
+        Fast path: known binary extension → binary, no file read.
+        Slow path: anything else → content-sniff the first 8KB.
+        """
+        if path.suffix.lower() in BINARY_EXTENSIONS:
+            return True, "utf-8"
+        return BinaryDetector.sniff(path)
+
 
 # --------------------------------------------------------------------------
 # Scanner
@@ -351,14 +402,12 @@ class ProjectScanner:
         use_gitignore: bool = True,
         user_excludes: Iterable[str] | None = None,
         follow_symlinks: bool = False,
-        include_binary: bool = False,
         protect_paths: Iterable[Path] | None = None,
         warn: WarnFn = _default_warn,
     ) -> None:
         self._root = root.resolve()
         self._max_file_size = max_file_size
         self._follow = follow_symlinks
-        self._include_binary = include_binary
         # Paths that must never be scanned (e.g. the output file living
         # inside the project — a re-run must not dump the previous dump).
         self._protect = {p.resolve() for p in (protect_paths or ())}
@@ -467,27 +516,24 @@ class ProjectScanner:
             return
 
         try:
-            is_binary, encoding = BinaryDetector.sniff(abs_path)
+            is_binary, encoding = BinaryDetector.classify(abs_path)
         except OSError as exc:
             self._warn(f"could not read {abs_path}: {exc} — file skipped")
             result.skipped.append(SkipRecord(rel_child, "unreadable (locked?)"))
             return
 
         if is_binary:
-            if self._include_binary:
-                mime, _ = mimetypes.guess_type(child.name)
-                result.entries.append(
-                    FileEntry(
-                        relative_path=rel_child,
-                        absolute_path=abs_path,
-                        size_bytes=size,
-                        is_binary=True,
-                        mime_type=mime or "application/octet-stream",
-                    )
+            mime, _ = mimetypes.guess_type(child.name)
+            result.entries.append(
+                FileEntry(
+                    relative_path=rel_child,
+                    absolute_path=abs_path,
+                    size_bytes=size,
+                    is_binary=True,
+                    mime_type=mime or "application/octet-stream",
                 )
-                result.total_bytes += size
-            else:
-                result.skipped.append(SkipRecord(rel_child, "binary"))
+            )
+            result.total_bytes += size
             return
 
         if size > self._max_file_size:

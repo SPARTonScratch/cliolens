@@ -14,6 +14,7 @@ def test_end_to_end(make_project, tmp_path):
             "secret/keys.txt": "hunter2",
             "debug.log": "noise",
             "assets/blob.bin": b"\x00\x01\x02",
+            "assets/logo.png": b"\x89PNG\x00\x00",
             "node_modules/junk.js": "var x;",
         }
     )
@@ -26,6 +27,10 @@ def test_end_to_end(make_project, tmp_path):
     assert "hunter2" not in doc
     assert "noise" not in doc
     assert "junk.js" not in doc
+
+    # Binary files appear in the tree but get no contents entry by default.
+    assert "logo.png" in doc               # present in tree
+    assert "[Binary file:" not in doc      # no notice without --show-binary
 
     # Included content is fenced with the right language.
     assert "### src/app.py" in doc

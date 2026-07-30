@@ -89,9 +89,28 @@ def test_overwrite_existing_output(make_project, tmp_path):
     assert main([str(root), "-o", str(out)]) == 0
     assert "stale" not in out.read_text(encoding="utf-8")
 
+
 def test_default_output_filename(make_project, tmp_path):
     root = make_project({"a.py": "x = 1\n"})
     assert main([str(root)]) == 0
     out = tmp_path / "cliolens project context.md"
     assert out.exists()
     assert "# Project Context Dump" in out.read_text(encoding="utf-8")
+
+
+def test_binary_in_tree_without_flag(make_project, tmp_path):
+    root = make_project({"a.py": "x = 1\n", "img.png": b"\x89PNG\x00\x00"})
+    out = tmp_path / "ctx.md"
+    assert main([str(root), "-o", str(out)]) == 0
+    doc = out.read_text(encoding="utf-8")
+    assert "img.png" in doc                # present in tree
+    assert "[Binary file:" not in doc      # no notice without flag
+
+
+def test_show_binary_flag(make_project, tmp_path):
+    root = make_project({"a.py": "x = 1\n", "img.png": b"\x89PNG\x00\x00"})
+    out = tmp_path / "ctx.md"
+    assert main([str(root), "-o", str(out), "--show-binary"]) == 0
+    doc = out.read_text(encoding="utf-8")
+    assert "img.png" in doc                # present in tree
+    assert "[Binary file:" in doc          # notice present with flag
