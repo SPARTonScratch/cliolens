@@ -34,19 +34,39 @@ copy-paste workflow in one shot, with guardrails:
 
 ## Installation
 
+**Prerequisites (one-time):**
+
 ```powershell
-# 1. Get uv if you don't have it (PowerShell)
+# uv — manages Python and packages for you
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-# 2. In the project root
-uv tool install .
+# Git — needed to fetch from GitHub (skip if you already have it)
+winget install Git.Git
+```
 
-# 3. Done — available globally in any new terminal
-cliolens --version
+**Install ClioLens** (open a **new terminal** after the steps above):
+
+```powershell
+uv tool install git+https://github.com/SPARTonScratch/cliolens
+cliolens --version   # verify
+```
+
+To pin a specific release instead of tracking `main`:
+
+```powershell
+uv tool install git+https://github.com/SPARTonScratch/cliolens@v0.1.0
+```
+
+### From source (for contributors)
+
+```powershell
+git clone https://github.com/SPARTonScratch/cliolens
+cd cliolens
+uv tool install .        # or: uv pip install -e ".[dev]" for editable + test tooling
 ```
 
 Upgrade / uninstall: `uv tool upgrade cliolens` · `uv tool uninstall cliolens`.
-Plain `pip install .` also works.
+Plain `pip install .` also works from a local clone.
 
 ## Quickstart
 
