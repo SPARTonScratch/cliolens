@@ -57,7 +57,7 @@ cliolens . -o -
 cliolens . --dry-run
 
 # Check against a 128K-token model window
-cliolens . -o context.md -t 128000
+cliolens . -t 128000
 ```
 
 ## CLI reference
