@@ -177,16 +177,6 @@ src/cliolens/
 └── utils.py      # token estimation, size formatting, path helpers
 ```
 
-## Roadmap
-
-- **v0.2.0** — interactive exclusion preview, `.cliolens.toml` config, watch
-  mode, auto-split output by token budget
-- **v0.3.0** — diff mode against a previous dump, output templates,
-  Windows clipboard integration
-
-**Non-goals for v0.1.0:** no AI/API calls, no file modification, no AST or
-code intelligence, no archives, no GUI, no remote URLs, no incremental diffs.
-
 ## License
 
 MIT License, see [LICENSE](LICENSE).
