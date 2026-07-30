@@ -24,3 +24,4 @@ env/
 # Tool output
 context.md
 dump.md
+cliolens project context.md

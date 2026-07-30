@@ -15,11 +15,14 @@ from .scanner import ProjectScanner
 from .utils import estimate_tokens, format_count, format_size, parse_size, style
 
 PROG = "cliolens"
+DEFAULT_OUTPUT = "cliolens project context.md"
+STDOUT_TOKEN = "-"
 
 EXAMPLES = """\
 examples:
-  cliolens .                                  dump the current directory to stdout
-  cliolens . -o context.md                    dump the current directory to a file
+  cliolens .                                  dump to 'cliolens project context.md' (default)
+  cliolens . -o -                             print the dump to stdout instead
+  cliolens . -o context.md                    dump to a specific file
   cliolens C:\\Dev\\app -o dump.md -e "*.test.js" -e "docs/"
   cliolens . --dry-run                        preview what would be included/skipped
   cliolens . -o out.md -m 50KB --no-gitignore strict mode: small files only
@@ -45,8 +48,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="root directory to scan (default: current directory)",
     )
     parser.add_argument(
-        "-o", "--output", metavar="PATH",
-        help="output file path (default: print to stdout; existing files are overwritten)",
+        "-o", "--output", metavar="PATH", default=DEFAULT_OUTPUT,
+        help="output file path (default: 'cliolens project context.md' in the current "
+            "directory; use '-o -' to print to stdout; existing files are overwritten)",
     )
     parser.add_argument(
         "-m", "--max-file-size", default="100KB", metavar="SIZE",
@@ -204,7 +208,8 @@ def _run(argv: list[str] | None) -> int:
     if args.max_tokens < 0:
         parser.error("--max-tokens must be >= 0")
 
-    output_path = Path(args.output) if args.output else None
+    use_stdout = args.output == STDOUT_TOKEN
+    output_path = None if use_stdout else Path(args.output)
     if output_path is not None and output_path.is_dir():
         _fail(f"Output path '{output_path}' is a directory. Specify a file path.")
 

@@ -47,8 +47,11 @@ Plain `pip install .` also works.
 ## Quickstart
 
 ```powershell
-# Dump the current directory to a file
-cliolens . -o context.md
+# Dump the current directory, writes 'cliolens project context.md' right here
+cliolens .
+
+# Want it on stdout instead (to pipe or copy)?
+cliolens . -o -
 
 # Preview exactly what will be included before generating
 cliolens . --dry-run

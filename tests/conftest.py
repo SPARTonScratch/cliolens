@@ -28,3 +28,9 @@ def make_project(tmp_path: Path):
         return base
 
     return _make
+
+@pytest.fixture(autouse=True)
+def _isolate_cwd(tmp_path, monkeypatch):
+    """Run every test from a private directory, so a default-output run
+    can never drop files into the real project."""
+    monkeypatch.chdir(tmp_path)
