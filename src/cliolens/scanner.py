@@ -7,6 +7,7 @@ collects file metadata plus content.
 
 from __future__ import annotations
 
+import base64
 import fnmatch
 import mimetypes
 import os
@@ -125,9 +126,10 @@ class FileEntry:
     absolute_path: Path
     size_bytes: int
     is_binary: bool = False
-    content: str | None = None      # None for binary entries
-    truncated: bool = False         # content holds only the first N lines
+    content: str | None = None      # None for binary entries without --show-binary
+    truncated: bool = False         # content holds only the first N lines / bytes
     omitted_lines: int = 0
+    omitted_bytes: int = 0          # bytes omitted for truncated binary content
     head_cut: bool = False          # the raw sample itself was cut mid-file
     mime_type: str = "text/plain"
 
@@ -402,12 +404,14 @@ class ProjectScanner:
         use_gitignore: bool = True,
         user_excludes: Iterable[str] | None = None,
         follow_symlinks: bool = False,
+        show_binary: bool = False,
         protect_paths: Iterable[Path] | None = None,
         warn: WarnFn = _default_warn,
     ) -> None:
         self._root = root.resolve()
         self._max_file_size = max_file_size
         self._follow = follow_symlinks
+        self._show_binary = show_binary
         # Paths that must never be scanned (e.g. the output file living
         # inside the project — a re-run must not dump the previous dump).
         self._protect = {p.resolve() for p in (protect_paths or ())}
@@ -524,12 +528,20 @@ class ProjectScanner:
 
         if is_binary:
             mime, _ = mimetypes.guess_type(child.name)
+            content = None
+            truncated = False
+            omitted_bytes = 0
+            if self._show_binary:
+                content, truncated, omitted_bytes = self._read_binary(abs_path, size)
             result.entries.append(
                 FileEntry(
                     relative_path=rel_child,
                     absolute_path=abs_path,
                     size_bytes=size,
                     is_binary=True,
+                    content=content,
+                    truncated=truncated,
+                    omitted_bytes=omitted_bytes,
                     mime_type=mime or "application/octet-stream",
                 )
             )
@@ -590,3 +602,21 @@ class ProjectScanner:
             omitted_lines=omitted,
             head_cut=size > len(head),
         )
+
+    def _read_binary(self, path: Path, size: int) -> tuple[str | None, bool, int]:
+        """Read binary content, base64-encode it, respect max_file_size.
+
+        Returns ``(encoded_content, truncated, omitted_bytes)``.
+        On read failure, returns ``(None, False, 0)`` — the formatter
+        falls back to the placeholder notice.
+        """
+        try:
+            read_size = min(size, self._max_file_size)
+            with open(path, "rb") as fh:
+                raw = fh.read(read_size)
+            truncated = size > self._max_file_size
+            omitted = max(size - self._max_file_size, 0)
+            return base64.b64encode(raw).decode("ascii"), truncated, omitted
+        except OSError as exc:
+            self._warn(f"could not read {path}: {exc} — binary content skipped")
+            return None, False, 0

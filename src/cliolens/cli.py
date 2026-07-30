@@ -79,8 +79,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--show-binary", action="store_true",
-        help="show a placeholder notice for binary files in the File Contents "
-             "section (they always appear in the directory tree and counts)",
+        help="dump binary file contents as base64-encoded text in the File "
+             "Contents section; without this flag, a placeholder notice is shown",
     )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}",
@@ -129,7 +129,7 @@ def _print_dry_run(result, *, show_binary: bool = False) -> None:
     for entry in result.entries:
         tags = []
         if entry.is_binary:
-            tags.append("binary, notice in contents" if show_binary else "binary")
+            tags.append("binary, base64 content" if show_binary else "binary, placeholder")
         if entry.truncated:
             tags.append("truncated")
         suffix = f"  [{', '.join(tags)}]" if tags else ""
@@ -219,6 +219,7 @@ def _run(argv: list[str] | None) -> int:
         use_gitignore=not args.no_gitignore,
         user_excludes=args.exclude,
         follow_symlinks=args.follow_symlinks,
+        show_binary=args.show_binary,
         protect_paths={output_path} if output_path is not None else None,
         warn=_warn,
     )
@@ -231,7 +232,6 @@ def _run(argv: list[str] | None) -> int:
     # -- format & write -------------------------------------------------------
     document = MarkdownFormatter(
         max_file_size_label=args.max_file_size,
-        show_binary=args.show_binary,
     ).format(result)
 
     if output_path is not None:

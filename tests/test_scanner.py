@@ -1,3 +1,4 @@
+import base64
 import os
 import sys
 
@@ -195,6 +196,32 @@ def test_binary_entry_has_mime_type(make_project):
     assert entry.is_binary
     assert entry.content is None
     assert "png" in entry.mime_type
+
+
+def test_binary_content_none_without_flag(make_project):
+    root = make_project({"logo.png": b"\x89PNG\x00\x00"})
+    result = scan(root)
+    assert result.entries[0].content is None
+
+
+def test_binary_content_base64_with_flag(make_project):
+    raw = b"\x89PNG\r\n\x1a\n\x00\x00"
+    root = make_project({"logo.png": raw})
+    result = scan(root, show_binary=True)
+    entry = result.entries[0]
+    assert entry.content is not None
+    assert base64.b64decode(entry.content) == raw
+    assert not entry.truncated
+
+
+def test_binary_truncation_with_flag(make_project):
+    raw = b"\x00" * 2048
+    root = make_project({"blob.dat": raw})
+    result = scan(root, show_binary=True, max_file_size=1024)
+    entry = result.entries[0]
+    assert entry.truncated
+    assert entry.omitted_bytes == 1024
+    assert len(base64.b64decode(entry.content)) == 1024
 
 
 def test_extension_blacklist_overrides_content(make_project):

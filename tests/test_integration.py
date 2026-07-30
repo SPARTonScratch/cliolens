@@ -28,9 +28,10 @@ def test_end_to_end(make_project, tmp_path):
     assert "noise" not in doc
     assert "junk.js" not in doc
 
-    # Binary files appear in the tree but get no contents entry by default.
+    # Binary files always get a placeholder in File Contents.
     assert "logo.png" in doc               # present in tree
-    assert "[Binary file:" not in doc      # no notice without --show-binary
+    assert "[Binary file:" in doc          # placeholder always shown
+    assert "content omitted" in doc        # no base64 without --show-binary
 
     # Included content is fenced with the right language.
     assert "### src/app.py" in doc

@@ -98,19 +98,21 @@ def test_default_output_filename(make_project, tmp_path):
     assert "# Project Context Dump" in out.read_text(encoding="utf-8")
 
 
-def test_binary_in_tree_without_flag(make_project, tmp_path):
+def test_binary_placeholder_without_flag(make_project, tmp_path):
     root = make_project({"a.py": "x = 1\n", "img.png": b"\x89PNG\x00\x00"})
     out = tmp_path / "ctx.md"
     assert main([str(root), "-o", str(out)]) == 0
     doc = out.read_text(encoding="utf-8")
     assert "img.png" in doc                # present in tree
-    assert "[Binary file:" not in doc      # no notice without flag
+    assert "[Binary file:" in doc          # placeholder always shown
+    assert "content omitted" in doc        # no actual content
 
 
-def test_show_binary_flag(make_project, tmp_path):
+def test_show_binary_dumps_base64(make_project, tmp_path):
     root = make_project({"a.py": "x = 1\n", "img.png": b"\x89PNG\x00\x00"})
     out = tmp_path / "ctx.md"
     assert main([str(root), "-o", str(out), "--show-binary"]) == 0
     doc = out.read_text(encoding="utf-8")
     assert "img.png" in doc                # present in tree
-    assert "[Binary file:" in doc          # notice present with flag
+    assert "content omitted" not in doc    # placeholder NOT shown
+    assert "iVBORwAA" in doc              # base64 of b"\x89PNG\x00\x00"

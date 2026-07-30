@@ -123,9 +123,8 @@ class TreeRenderer:
 class MarkdownFormatter:
     """Assembles the single-file context dump."""
 
-    def __init__(self, *, max_file_size_label: str, show_binary: bool = False) -> None:
+    def __init__(self, *, max_file_size_label: str) -> None:
         self._size_label = max_file_size_label
-        self._show_binary = show_binary
 
     def format(self, result: ScanResult) -> str:
         body = self._render_body(result)
@@ -179,13 +178,25 @@ class MarkdownFormatter:
         header = f"### {entry.relative_path}\n"
 
         if entry.is_binary:
-            if not self._show_binary:
-                return ""
-            return (
-                f"{header}\n"
-                f"[Binary file: {entry.mime_type}, {format_size(entry.size_bytes)}"
-                " — content omitted]\n"
-            )
+            if entry.content is None:
+                # Placeholder — content not dumped (default)
+                return (
+                    f"{header}\n"
+                    f"[Binary file: {entry.mime_type}, {format_size(entry.size_bytes)}"
+                    " — content omitted]\n"
+                )
+            # Base64 content dumped (--show-binary)
+            fence = fence_for(entry.content)
+            if entry.truncated:
+                shown = format_size(entry.size_bytes - entry.omitted_bytes)
+                notice = (
+                    f"// [Binary content truncated: file is {format_size(entry.size_bytes)}, "
+                    f"max allowed is {self._size_label}]\n"
+                    f"// First {shown} of binary data shown as base64 below:\n"
+                )
+                tail = f"\n// [... {format_size(entry.omitted_bytes)} of binary data omitted ...]"
+                return f"{header}\n{fence}\n{notice}{entry.content}{tail}\n{fence}\n"
+            return f"{header}\n{fence}\n{entry.content}\n{fence}\n"
 
         lang = language_for(entry.relative_path)
         body = entry.content or ""
