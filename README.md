@@ -129,9 +129,6 @@ with their MIME type and size. Use `--show-binary` to replace the placeholder
 with the file's full content as base64-encoded text (subject to
 `--max-file-size` truncation, measured in bytes).
 
-*Design decision (v0.1.0): `*.lock` files are excluded by default — they're
-large and low-signal for AI context. This may be revisited based on feedback.*
-
 ## Anatomy of the output
 
 ````markdown
