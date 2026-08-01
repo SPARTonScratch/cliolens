@@ -139,7 +139,9 @@ class MarkdownFormatter:
     # -- sections -----------------------------------------------------------
 
     def _render_header(self, result: ScanResult, tokens: int, chars: int) -> str:
-        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        dt = datetime.now().astimezone()
+        offset = dt.strftime("%z")          # "-0400"
+        now = dt.strftime("%Y-%m-%d %H:%M:%S ") + offset[:3] + ":" + offset[3:]
         root_name = result.root.name or str(result.root)
         return (
             "# Project Context Dump\n"
