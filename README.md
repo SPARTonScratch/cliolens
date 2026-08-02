@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/cliolens-logo.png" width="256" alt="ClioLens logo">
+    <img src="https://raw.githubusercontent.com/SPARTonScratch/cliolens/main/assets/cliolens-logo.png" width="256" alt="ClioLens logo">
 </p>
 
 <h1 align="center">ClioLens</h1>
