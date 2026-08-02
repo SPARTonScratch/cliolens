@@ -1,5 +1,4 @@
-"""Output generator: renders the directory tree and assembles the final
-markdown document (spec §5)."""
+"""Output generator: renders the directory tree and assembles the final markdown document."""
 
 from __future__ import annotations
 
@@ -63,7 +62,7 @@ def fence_for(content: str) -> str:
     """The shortest code fence that safely wraps *content*.
 
     CommonMark: a fence of N backticks is closed only by N-or-more
-    backticks, so (longest run in the content + 1) is always safe — and
+    backticks, so (longest run in the content + 1) is always safe and using
     ``max(3, ...)`` keeps ordinary files at conventional triple backticks.
     """
     longest = run = 0
@@ -83,11 +82,7 @@ class _Node:
 
 
 class TreeRenderer:
-    """ASCII tree with box-drawing characters.
-
-    Rules (spec §5.2): forward slashes everywhere, directories before
-    files at each level, both groups alphabetical, excluded items absent.
-    """
+    """ASCII tree with box-drawing characters."""
 
     def render(self, root_name: str, directories: list[str], files: list[str]) -> str:
         root = _Node()
@@ -181,7 +176,7 @@ class MarkdownFormatter:
 
         if entry.is_binary:
             if entry.content is None:
-                # Placeholder — content not dumped (default)
+                # Placeholder; content not dumped (default)
                 return (
                     f"{header}\n"
                     f"[Binary file: {entry.mime_type}, {format_size(entry.size_bytes)}"

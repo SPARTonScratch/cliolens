@@ -104,11 +104,11 @@ def _write_stdout(document: str) -> None:
         sys.stdout.write(document)
         sys.stdout.flush()
     except UnicodeEncodeError:
-        # Console encoding can't take UTF-8 — encode safely (spec §8.3).
+        # Console encoding can't take UTF-8
         sys.stdout.buffer.write(document.encode("utf-8", errors="replace"))
         sys.stdout.buffer.flush()
     except BrokenPipeError:
-        # Downstream consumer (e.g. `| more`) closed the pipe — exit quietly.
+        # Downstream consumer (e.g. `| more`) closed the pipe -> exit quietly.
         devnull = os.open(os.devnull, os.O_WRONLY)
         os.dup2(devnull, sys.stdout.fileno())
         raise SystemExit(1) from None

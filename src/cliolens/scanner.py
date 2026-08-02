@@ -1,7 +1,7 @@
 """Discovery engine.
 
-Walks the project tree, applies the filter pipeline (built-in rules →
-.gitignore → user ``--exclude`` patterns), detects binary files, and
+Walks the project tree, applies the filter pipeline (built-in rules ->
+.gitignore -> user ``--exclude`` patterns), detects binary files, and
 collects file metadata plus content.
 """
 
@@ -21,7 +21,7 @@ from pathspec import GitIgnoreSpec
 from .utils import style
 
 # --------------------------------------------------------------------------
-# Built-in exclusions — ALWAYS active (independent of .gitignore handling).
+# Built-in exclusions are ALWAYS active (independent of .gitignore handling).
 # --------------------------------------------------------------------------
 
 EXCLUDED_DIR_NAMES = frozenset(
@@ -59,7 +59,7 @@ EXCLUDED_FILE_GLOBS = (
 )
 
 # --------------------------------------------------------------------------
-# Binary extension blacklist — fast-path classification (no file read).
+# Binary extension blacklist using fast-path classification (no file read).
 # Case-insensitive on ALL platforms: a .PNG is a PNG everywhere.
 # Content sniffing (BinaryDetector.sniff) remains the authority for
 # extensions not listed here.
@@ -98,9 +98,9 @@ BINARY_EXTENSIONS = frozenset(
     }
 )
 
-_BINARY_SNIFF_BYTES = 8192          # spec §6.4: inspect the first 8KB
-_CONTROL_CHAR_BUDGET = 0.30         # spec §6.4: >30% control chars → binary
-TRUNCATED_LINE_COUNT = 50           # spec §5.4: keep the first 50 lines
+_BINARY_SNIFF_BYTES = 8192          # inspect the first 8KB
+_CONTROL_CHAR_BUDGET = 0.30         # >30% control chars -> binary
+TRUNCATED_LINE_COUNT = 50           # keep the first 50 lines
 _HEAD_SAMPLE_BYTES = 256 * 1024     # max bytes buffered when truncating
 
 IS_WINDOWS = os.name == "nt"
@@ -163,7 +163,7 @@ class ScanResult:
 
 
 # --------------------------------------------------------------------------
-# Filter pipeline (chain of responsibility: built-in → gitignore → user)
+# Filter pipeline (chain of responsibility: built-in -> gitignore -> user)
 # --------------------------------------------------------------------------
 
 
@@ -252,8 +252,8 @@ class GitignoreFilter:
         self._specs.append((rel_prefix, spec, neg_spec))
 
     def verdict(self, rel_posix: str, is_dir: bool) -> bool | None:
-        """``True`` → excluded, ``False`` → explicitly re-included,
-        ``None`` → no rule matched at any level."""
+        """``True`` -> excluded, ``False`` -> explicitly re-included,
+        ``None`` -> no rule matched at any level."""
         target = rel_posix + "/" if is_dir else rel_posix
         result: bool | None = None
         for prefix, spec, neg_spec in self._specs:
@@ -269,7 +269,7 @@ class GitignoreFilter:
             if matched is True:
                 result = True
             elif matched is False and neg_spec is not None and neg_spec.match_file(sub):
-                # A negation genuinely matched this path — trust it.
+                # A negation genuinely matched this path; trust it.
                 result = False
             # matched is None, or False without a matching negation
             # (pathspec 1.x quirk): this level has no real opinion.
@@ -316,7 +316,7 @@ class UserExcludeFilter:
 
 
 class FilterPipeline:
-    """Chain of responsibility: built-in → .gitignore → user exclusions."""
+    """Chain of responsibility: built-in -> .gitignore -> user exclusions."""
 
     def __init__(
         self,
@@ -348,7 +348,7 @@ class FilterPipeline:
 
 
 class BinaryDetector:
-    """Heuristic binary detection per spec §6.4."""
+    """Heuristic binary detection."""
 
     @staticmethod
     def sniff(path: Path) -> tuple[bool, str]:
@@ -374,8 +374,8 @@ class BinaryDetector:
     def classify(path: Path) -> tuple[bool, str]:
         """Classify a file as binary or text.
 
-        Fast path: known binary extension → binary, no file read.
-        Slow path: anything else → content-sniff the first 8KB.
+        Fast path: known binary extension -> binary, no file read.
+        Slow path: anything else -> content-sniff the first 8KB.
         """
         if path.suffix.lower() in BINARY_EXTENSIONS:
             return True, "utf-8"
@@ -412,8 +412,7 @@ class ProjectScanner:
         self._max_file_size = max_file_size
         self._follow = follow_symlinks
         self._show_binary = show_binary
-        # Paths that must never be scanned (e.g. the output file living
-        # inside the project — a re-run must not dump the previous dump).
+        # Paths that must never be scanned (e.g. the output file living inside the project).
         self._protect = {p.resolve() for p in (protect_paths or ())}
         self._warn = warn
         self._pipeline = FilterPipeline(
@@ -444,7 +443,7 @@ class ProjectScanner:
             with os.scandir(dir_path) as it:
                 children = sorted(it, key=lambda e: e.name.casefold())
         except PermissionError:
-            self._warn(f"permission denied: {dir_path} — directory skipped")
+            self._warn(f"permission denied: {dir_path} -> directory skipped")
             return
         except OSError as exc:
             self._warn(f"could not read {dir_path}: {exc}")
@@ -522,7 +521,7 @@ class ProjectScanner:
         try:
             is_binary, encoding = BinaryDetector.classify(abs_path)
         except OSError as exc:
-            self._warn(f"could not read {abs_path}: {exc} — file skipped")
+            self._warn(f"could not read {abs_path}: {exc} -> file skipped")
             result.skipped.append(SkipRecord(rel_child, "unreadable (locked?)"))
             return
 
@@ -564,7 +563,7 @@ class ProjectScanner:
             with open(path, encoding=encoding, errors="replace") as fh:
                 content = fh.read()
         except OSError as exc:
-            self._warn(f"could not read {path}: {exc} — file skipped")
+            self._warn(f"could not read {path}: {exc} -> file skipped")
             result.skipped.append(SkipRecord(rel, "unreadable (locked?)"))
             return None
         return FileEntry(
@@ -587,7 +586,7 @@ class ProjectScanner:
                         head += chunk
             head_text = head[:_HEAD_SAMPLE_BYTES].decode(encoding, errors="replace")
         except OSError as exc:
-            self._warn(f"could not read {path}: {exc} — file skipped")
+            self._warn(f"could not read {path}: {exc} -> file skipped")
             result.skipped.append(SkipRecord(rel, "unreadable (locked?)"))
             return None
 
@@ -607,8 +606,8 @@ class ProjectScanner:
         """Read binary content, base64-encode it, respect max_file_size.
 
         Returns ``(encoded_content, truncated, omitted_bytes)``.
-        On read failure, returns ``(None, False, 0)`` — the formatter
-        falls back to the placeholder notice.
+        On read failure, returns ``(None, False, 0)``;
+        the formatter falls back to the placeholder notice.
         """
         try:
             read_size = min(size, self._max_file_size)
@@ -618,5 +617,5 @@ class ProjectScanner:
             omitted = max(size - self._max_file_size, 0)
             return base64.b64encode(raw).decode("ascii"), truncated, omitted
         except OSError as exc:
-            self._warn(f"could not read {path}: {exc} — binary content skipped")
+            self._warn(f"could not read {path}: {exc} -> binary content skipped")
             return None, False, 0

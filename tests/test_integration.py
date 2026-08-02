@@ -38,7 +38,7 @@ def test_end_to_end(make_project, tmp_path):
     assert "```python" in doc
     assert "```html" in doc
 
-    # Sections appear in the strict spec order.
+    # Sections appear in correct order.
     assert doc.index("## Metadata") < doc.index("## Directory Tree") < doc.index("## File Contents")
 
     # The tree is fenced so it renders as-is in markdown viewers.

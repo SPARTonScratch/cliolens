@@ -1,4 +1,4 @@
-"""ClioLens — focus the muse of history on your codebase.
+"""ClioLens
 
 Packs a project directory into a single markdown "context dump"
 (directory tree + full file contents + token estimates) designed to be

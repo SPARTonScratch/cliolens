@@ -225,7 +225,7 @@ def test_binary_truncation_with_flag(make_project):
 
 
 def test_extension_blacklist_overrides_content(make_project):
-    """A .jpg containing valid UTF-8 text is still binary — extension wins."""
+    """A .jpg containing valid UTF-8 text is still binary so the extension wins."""
     root = make_project({"fake.jpg": "this is actually text\n"})
     result = scan(root)
     assert result.entries[0].is_binary

@@ -1,7 +1,5 @@
 """Shared utilities: token estimation, size parsing/formatting, path
 normalisation, and small terminal helpers.
-
-Pure standard library — trivially testable, no I/O surprises.
 """
 
 from __future__ import annotations
@@ -38,13 +36,7 @@ _ANSI_CODES = {
 
 
 def estimate_tokens(text: str) -> int:
-    """Rough LLM token estimate: ``ceil(characters / 4)``.
-
-    The industry-standard heuristic for mixed English/code text. A real
-    tokenizer (tiktoken etc.) would require bundled data or network
-    access, which ClioLens deliberately avoids. Accuracy target: ±20%
-    of a real tokenizer on typical source code.
-    """
+    """Rough LLM token estimate: ``ceil(characters / 4)``."""
     return math.ceil(len(text) / 4)
 
 
@@ -56,7 +48,7 @@ def parse_size(value: str) -> int:
     match = _SIZE_RE.match(value)
     if match is None:
         raise ValueError(
-            f"invalid size {value!r} — expected forms like '100KB', '1.5MB', '2GB' or '512'"
+            f"invalid size {value!r} -> expected forms like '100KB', '1.5MB', '2GB' or '512'"
         )
     number = float(match.group(1))
     unit = (match.group(2) or "B").upper()
@@ -76,7 +68,7 @@ def format_size(num_bytes: float) -> str:
 
 
 def format_count(n: int) -> str:
-    """``1234567`` → ``'1,234,567'``."""
+    """``1234567`` -> ``'1,234,567'``."""
     return f"{n:,}"
 
 
@@ -104,7 +96,7 @@ def style(text: str, *codes: str) -> str:
     """Wrap *text* in ANSI codes when the terminal supports color.
 
     Honors the ``NO_COLOR`` / ``FORCE_COLOR`` conventions. Used only for
-    stderr diagnostics — the dump itself is always plain markdown.
+    stderr diagnostics; the dump itself is always plain markdown.
     """
     if not supports_color():
         return text
